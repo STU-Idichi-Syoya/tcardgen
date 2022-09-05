@@ -30,17 +30,17 @@ type FrontMatter struct {
 }
 
 // ParseFrontMatter parses the frontmatter of the specified Hugo content.
-func ParseFrontMatter(filename string,defaultFrontMatter *FrontMatter) (*FrontMatter, error) {
+func ParseFrontMatter(filename string, defaultFrontMatter *FrontMatter) (*FrontMatter, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	return parseFrontMatter(file,defaultFrontMatter)
+	return parseFrontMatter(file, defaultFrontMatter)
 }
 
-func parseFrontMatter(r io.Reader,defaultFrontMatter *FrontMatter) (*FrontMatter, error) {
+func parseFrontMatter(r io.Reader, defaultFrontMatter *FrontMatter) (*FrontMatter, error) {
 	cfm, err := pageparser.ParseFrontMatterAndContent(r)
 	if err != nil {
 		return nil, err
@@ -69,11 +69,9 @@ func parseFrontMatter(r io.Reader,defaultFrontMatter *FrontMatter) (*FrontMatter
 		fm.Date = defaultFrontMatter.Date
 	}
 
-	if isDraft:=cfm.FrontMatter["draft"];isDraft!=nil&&isDraft.(bool){
-		return nil,errors.New("this article is draft")
+	if isDraft, err := getBool(&cfm, "draft"); err != nil && isDraft {
+		return nil, errors.New("this article is draft")
 	}
-
-	
 
 	return fm, nil
 }
@@ -160,6 +158,20 @@ func getFirstStringItem(cfm *pageparser.ContentFrontMatter, fmKey string) (strin
 		return "", err
 	}
 	return arr[0], nil
+}
+
+func getBool(cfm *pageparser.ContentFrontMatter, fmKey string) (bool, error) {
+	v, ok := cfm.FrontMatter[fmKey]
+	if !ok {
+		return false, NewFMNotExistError(fmKey)
+	}
+
+	switch b := v.(type) {
+	case bool:
+		return b, nil
+	default:
+		return false, NewFMInvalidTypeError(fmKey, "bool", b)
+	}
 }
 
 func isArray(cfm *pageparser.ContentFrontMatter, fmKey string) bool {
