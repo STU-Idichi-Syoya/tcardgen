@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -55,6 +56,10 @@ type RootCommandOption struct {
 	output  string
 	tplImg  string
 	config  string
+
+	defaultAuthor string
+	defaultCategory string
+	defaultTags []string
 }
 
 func NewRootCmd() *cobra.Command {
@@ -84,6 +89,10 @@ func NewRootCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.output, "output", "o", defaultOutput, "Set an output directory or filename (only png format).")
 	cmd.Flags().StringVarP(&opt.tplImg, "template", "t", "", fmt.Sprintf("Set a template image file. (default %s)", config.DefaultTemplate))
 	cmd.Flags().StringVarP(&opt.config, "config", "c", "", "Set a drawing configuration file.")
+	cmd.Flags().StringVarP(&opt.defaultAuthor, "defaultAuthor", "", "", "Set a default author name.")
+	cmd.Flags().StringVarP(&opt.defaultCategory, "defaultCategory", "", "", "Set a default category name.")
+	cmd.Flags().StringSliceVarP(&opt.defaultTags, "defaultTags", "", []string{}, "Set default tags.")
+	
 	return cmd
 }
 
@@ -139,6 +148,15 @@ func (o *RootCommandOption) Run(streams IOStreams) error {
 		}
 	}
 
+
+	defaultFrontMatter := &hugo.FrontMatter{
+		Title: "",
+		Author: o.defaultAuthor,
+		Category: o.defaultCategory,
+		Tags: o.defaultTags,
+		Date: time.Now(),
+	}
+
 	var errCnt int
 	for _, f := range o.files {
 		out := filepath.Join(outDir, outFilename)
@@ -147,7 +165,7 @@ func (o *RootCommandOption) Run(streams IOStreams) error {
 			out += fmt.Sprintf("/%s.png", base[:len(base)-len(filepath.Ext(base))])
 		}
 
-		if err := generateTCard(f, out, tpl, ffa, cnf); err != nil {
+		if err := generateTCard(f, out, defaultFrontMatter ,tpl, ffa, cnf); err != nil {
 			fmt.Fprintf(streams.ErrOut, "Failed to generate twitter card for %v: %v\n", out, err)
 			errCnt++
 			continue
@@ -161,8 +179,8 @@ func (o *RootCommandOption) Run(streams IOStreams) error {
 	return nil
 }
 
-func generateTCard(contentPath, outPath string, tpl image.Image, ffa *fontfamily.FontFamily, cnf *config.DrawingConfig) error {
-	fm, err := hugo.ParseFrontMatter(contentPath)
+func generateTCard(contentPath, outPath string, defaultFrontMatter *hugo.FrontMatter,tpl image.Image, ffa *fontfamily.FontFamily, cnf *config.DrawingConfig) error {
+	fm, err := hugo.ParseFrontMatter(contentPath,defaultFrontMatter)
 	if err != nil {
 		return err
 	}

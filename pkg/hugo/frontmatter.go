@@ -29,17 +29,17 @@ type FrontMatter struct {
 }
 
 // ParseFrontMatter parses the frontmatter of the specified Hugo content.
-func ParseFrontMatter(filename string) (*FrontMatter, error) {
+func ParseFrontMatter(filename string,defaultFrontMatter *FrontMatter) (*FrontMatter, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	return parseFrontMatter(file)
+	return parseFrontMatter(file,defaultFrontMatter)
 }
 
-func parseFrontMatter(r io.Reader) (*FrontMatter, error) {
+func parseFrontMatter(r io.Reader,defaultFrontMatter *FrontMatter) (*FrontMatter, error) {
 	cfm, err := pageparser.ParseFrontMatterAndContent(r)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func parseFrontMatter(r io.Reader) (*FrontMatter, error) {
 
 	fm := &FrontMatter{}
 	if fm.Title, err = getString(&cfm, fmTitle); err != nil {
-		return nil, err
+		fm.Title = defaultFrontMatter.Title
 	}
 	if isArray := isArray(&cfm, fmAuthor); isArray {
 		if fm.Author, err = getFirstStringItem(&cfm, fmAuthor); err != nil {
@@ -55,17 +55,17 @@ func parseFrontMatter(r io.Reader) (*FrontMatter, error) {
 		}
 	} else {
 		if fm.Author, err = getString(&cfm, fmAuthor); err != nil {
-			return nil, err
+			fm.Author = defaultFrontMatter.Author
 		}
 	}
 	if fm.Category, err = getFirstStringItem(&cfm, fmCategories); err != nil {
-		return nil, err
+		fm.Category = defaultFrontMatter.Category
 	}
 	if fm.Tags, err = getAllStringItems(&cfm, fmTags); err != nil {
-		return nil, err
+		fm.Tags = defaultFrontMatter.Tags
 	}
 	if fm.Date, err = getContentDate(&cfm); err != nil {
-		return nil, err
+		fm.Date = defaultFrontMatter.Date
 	}
 
 	return fm, nil
