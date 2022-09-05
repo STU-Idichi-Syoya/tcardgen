@@ -1,6 +1,7 @@
 package hugo
 
 import (
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -67,6 +68,12 @@ func parseFrontMatter(r io.Reader,defaultFrontMatter *FrontMatter) (*FrontMatter
 	if fm.Date, err = getContentDate(&cfm); err != nil {
 		fm.Date = defaultFrontMatter.Date
 	}
+
+	if isDraft:=cfm.FrontMatter["draft"];isDraft!=nil&&isDraft.(bool){
+		return nil,errors.New("this article is draft")
+	}
+
+	
 
 	return fm, nil
 }
